@@ -104,6 +104,8 @@ export const EXTENSION_MAP: Record<string, Language> = {
   '.mm': 'objc',
   '.sv': 'systemverilog',
   '.svh': 'systemverilog',
+  '.v': 'systemverilog',
+  '.svi': 'systemverilog',
   // XML: file-level tracking; the MyBatis extractor matches `<mapper namespace="...">`
   // shape and emits SQL-statement nodes (other XML returns empty).
   '.xml': 'xml',
