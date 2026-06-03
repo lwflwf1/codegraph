@@ -33,6 +33,19 @@ import {
 export { generateNodeId } from './tree-sitter-helpers';
 
 /**
+ * Count the number of ERROR nodes in a tree-sitter parse tree.
+ * Used to detect syntax errors that tree-sitter recovered from.
+ */
+function countErrorNodes(node: SyntaxNode): number {
+  let count = node.isError ? 1 : 0;
+  for (let i = 0; i < node.childCount; i++) {
+    const child = node.child(i);
+    if (child) count += countErrorNodes(child);
+  }
+  return count;
+}
+
+/**
  * Extract the name from a node based on language
  */
 function extractName(node: SyntaxNode, source: string, extractor: LanguageExtractor): string {
@@ -194,6 +207,16 @@ export class TreeSitterExtractor {
       this.tree = parser.parse(this.source) ?? null;
       if (!this.tree) {
         throw new Error('Parser returned null tree');
+      }
+
+      if (this.tree.rootNode.hasError) {
+        const errorCount = countErrorNodes(this.tree.rootNode);
+        this.errors.push({
+          message: `Syntax errors detected — ${errorCount} ERROR node${errorCount !== 1 ? 's' : ''} in parse tree. Symbols may be missing or incorrect.`,
+          filePath: this.filePath,
+          severity: 'warning',
+          code: 'syntax_error',
+        });
       }
 
       // Create file node representing the source file
