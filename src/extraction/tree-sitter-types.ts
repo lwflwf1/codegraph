@@ -102,6 +102,8 @@ export interface LanguageExtractor {
   callTypes: string[];
   /** Node types that represent variable declarations (const, let, var, etc.) */
   variableTypes: string[];
+  /** Node types that represent constraint declarations */
+  constraintTypes?: string[];
   /** Node types that represent class fields (extracted as 'field' kind inside class bodies) */
   fieldTypes?: string[];
   /** Node types that represent class properties (extracted as 'property' kind inside class bodies) */

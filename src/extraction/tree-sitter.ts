@@ -339,6 +339,11 @@ export class TreeSitterExtractor {
       this.extractEnum(node);
       skipChildren = true; // extractEnum visits body children
     }
+    // Check for constraint declarations (e.g. SystemVerilog constraint_declaration)
+    else if (this.extractor.constraintTypes?.includes(nodeType)) {
+      this.extractConstraint(node);
+      skipChildren = true;
+    }
     // Check for type alias declarations (e.g. `type X = ...` in TypeScript)
     // For Go, type_spec wraps struct/interface definitions — resolveTypeAliasKind
     // detects these and extractTypeAlias creates the correct node kind.
@@ -1915,6 +1920,56 @@ export class TreeSitterExtractor {
         line: node.startPosition.row + 1,
         column: node.startPosition.column,
       });
+    }
+  }
+
+  /**
+   * Extract a constraint declaration (e.g. SystemVerilog `constraint c { ... }`).
+   * Creates a node with kind 'constraint', then scans the body for variable
+   * references to emit `references` edges to sibling variables.
+   */
+  private extractConstraint(node: SyntaxNode): void {
+    if (!this.extractor) return;
+    const name = extractName(node, this.source, this.extractor);
+    if (name === '<anonymous>') return;
+    const constraintNode = this.createNode('constraint', name, node, {});
+    if (!constraintNode) return;
+    this.nodeStack.push(constraintNode.id);
+    this.extractConstraintReferences(node, constraintNode.id);
+    this.nodeStack.pop();
+  }
+
+  /**
+   * Scan a constraint body for `simple_identifier` children and emit
+   * `references` edges to sibling variables with matching names.
+   */
+  private extractConstraintReferences(node: SyntaxNode, constraintNodeId: string): void {
+    if (!this.extractor) return;
+    for (let i = 0; i < node.namedChildCount; i++) {
+      const child = node.namedChild(i);
+      if (!child) continue;
+      if (child.type === 'simple_identifier') {
+        const refName = getNodeText(child, this.source);
+        const parentId = this.nodeStack.length > 0
+          ? this.nodeStack[this.nodeStack.length - 1]
+          : null;
+        if (!parentId) continue;
+        const target = this.nodes.find(n =>
+          n.name === refName &&
+          (n.kind === 'variable' || n.kind === 'constant') &&
+          this.edges.some(e => e.source === parentId && e.target === n.id)
+        );
+        if (target) {
+          this.edges.push({
+            source: constraintNodeId,
+            target: target.id,
+            kind: 'references',
+            line: child.startPosition.row + 1,
+          });
+        }
+      } else {
+        this.extractConstraintReferences(child, constraintNodeId);
+      }
     }
   }
 
