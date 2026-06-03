@@ -60,6 +60,12 @@ files → ExtractionOrchestrator (tree-sitter) → DB (nodes/edges/files)
 
 Each language extractor in `src/extraction/languages/` implements `LanguageExtractor` and returns `ExtractionResult` (nodes + edges). Register new languages in `src/extraction/languages/index.ts`. Tree-sitter grammars live as `.wasm` files in `src/extraction/wasm/` — they ship via `copy-assets`.
 
+- **SystemVerilog**: `src/extraction/languages/systemverilog.ts`. Tests in `__tests__/sv-extraction.test.ts` (lvds_phy, 11 files) and `__tests__/sv-extraction-dpu.test.ts` (dpu_top, 245 files). Improvements backlog: `docs/sv-improvements.md`.
+
+## Syntax Error Detection
+
+`src/extraction/tree-sitter.ts` checks `tree.rootNode.hasError` after parsing and reports `syntax_error` warnings with ERROR node counts. These are stored in the file record's `errors` field. Test by checking `cg.getFile(path)?.errors`.
+
 ## NodeKind / EdgeKind
 
 Defined in `src/types.ts`. Extractors and resolvers must use these exact strings:
